@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <base target="_top">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ScopeGuard</title>
+    <style>
+      :root {
+        --navy: #17233c;
+        --blue: #315cce;
+        --blue-dark: #2447a5;
+        --paper: #ffffff;
+        --page: #f3f6fb;
+        --ink: #172033;
+        --muted: #60708a;
+        --line: #d8e0ed;
+        --warning-bg: #fff8df;
+        --warning-line: #d89a00;
+        --danger: #b42318;
+        --success: #16794d;
+        --radius: 16px;
+        --shadow: 0 12px 32px rgba(24, 42, 79, 0.10);
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        background: var(--page);
+        color: var(--ink);
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+          "Segoe UI", sans-serif;
+        line-height: 1.5;
+      }
+
+      header {
+        background: linear-gradient(135deg, var(--navy), #263f72);
+        color: white;
+        padding: 34px 20px 42px;
+      }
+
+      .header-inner, main {
+        width: min(100% - 32px, 980px);
+        margin: 0 auto;
+      }
+
+      .eyebrow {
+        margin: 0 0 8px;
+        color: #b9cdfd;
+        font-size: 0.78rem;
+        font-weight: 800;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(1.8rem, 5vw, 3rem);
+        line-height: 1.1;
+      }
+
+      header p {
+        max-width: 680px;
+        margin: 12px 0 0;
+        color: #e0e8fb;
+      }
+
+      main {
+        display: grid;
+        gap: 20px;
+        margin-top: -20px;
+        padding-bottom: 48px;
+      }
+
+      .card {
+        background: var(--paper);
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        padding: clamp(18px, 4vw, 28px);
+      }
+
+      .step {
+        display: inline-grid;
+        place-items: center;
+        width: 30px;
+        height: 30px;
+        margin-right: 8px;
+        border-radius: 50%;
+        background: #e8efff;
+        color: var(--blue-dark);
+        font-weight: 800;
+      }
+
+      h2 {
+        display: flex;
+        align-items: center;
+        margin: 0 0 8px;
+        font-size: 1.2rem;
+      }
+
+      .hint, .meta { color: var(--muted); }
+      .hint { margin: 0 0 16px; }
+
+      label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 750;
+      }
+
+      textarea {
+        width: 100%;
+        min-height: 190px;
+        resize: vertical;
+        border: 1px solid #b9c6da;
+        border-radius: 12px;
+        padding: 14px;
+        color: var(--ink);
+        background: #fbfcff;
+        font: inherit;
+      }
+
+      textarea:focus, button:focus-visible {
+        outline: 3px solid rgba(49, 92, 206, 0.25);
+        outline-offset: 2px;
+      }
+
+      .input-footer, .button-row, .status-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+
+      .input-footer { margin-top: 10px; }
+
+      button {
+        min-height: 44px;
+        border: 0;
+        border-radius: 10px;
+        padding: 10px 18px;
+        font: inherit;
+        font-weight: 800;
+        cursor: pointer;
+        transition: transform 120ms ease, background 120ms ease, opacity 120ms ease;
+      }
+
+      button:hover:not(:disabled) { transform: translateY(-1px); }
+      button:disabled { cursor: not-allowed; opacity: 0.55; }
+      .primary { background: var(--blue); color: white; }
+      .primary:hover:not(:disabled) { background: var(--blue-dark); }
+      .approve { background: var(--success); color: white; }
+      .secondary { background: #e9edf4; color: var(--ink); }
+      .reject { background: #fff0ef; color: var(--danger); }
+
+      .notice {
+        margin-top: 14px;
+        border-radius: 10px;
+        padding: 12px 14px;
+      }
+
+      .notice.error {
+        border-left: 4px solid var(--danger);
+        background: #fff2f0;
+        color: #7a271a;
+      }
+
+      .notice.warning {
+        border-left: 4px solid var(--warning-line);
+        background: var(--warning-bg);
+      }
+
+      .notice ul { margin: 6px 0 0 20px; padding: 0; }
+
+      .status-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #98a2b3;
+      }
+
+      .status-dot.working { background: #d89a00; animation: pulse 1s infinite; }
+      .status-dot.ready { background: var(--success); }
+      .status-dot.failed { background: var(--danger); }
+
+      @keyframes pulse { 50% { opacity: 0.35; } }
+
+      .output-editor {
+        min-height: 160px;
+        white-space: pre-wrap;
+      }
+
+      .review-banner {
+        margin: 12px 0 16px;
+        padding: 12px 14px;
+        border: 1px solid #b9c9ec;
+        border-radius: 10px;
+        background: #f2f6ff;
+        font-weight: 700;
+      }
+
+      .task-list {
+        display: grid;
+        gap: 10px;
+        margin-top: 14px;
+      }
+
+      .task-item {
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 14px;
+        background: #fbfcff;
+        white-space: pre-wrap;
+      }
+
+      .task-item time {
+        display: block;
+        margin-top: 8px;
+        color: var(--muted);
+        font-size: 0.82rem;
+      }
+
+      .hidden { display: none !important; }
+
+      @media (max-width: 640px) {
+        .button-row button { flex: 1 1 130px; }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="header-inner">
+        <p class="eyebrow">Build 2 prototype</p>
+        <h1 id="appTitle">ScopeGuard</h1>
+        <p>
+          Compare a new request against an existing project scope. Review and verify the AI assessment before approving a scope decision.
+        </p>
+      </div>
+    </header>
+
+    <main>
+      <section class="card" aria-labelledby="inputHeading">
+        <h2 id="inputHeading"><span class="step">1</span>Enter project scope and new request</h2>
+        <p class="hint">
+          Do not enter confidential, regulated, private, or identifying information.
+        </p>
+
+        <div id="backendPanel" class="notice warning">
+          <div class="status-row">
+            <span class="status-row">
+              <span id="backendDot" class="status-dot working"></span>
+              <strong id="backendStatus">Checking the Colab backend…</strong>
+            </span>
+            <button id="testConnectionButton" class="secondary" type="button">Test connection</button>
+          </div>
+          <div id="backendDetail" class="meta">The app will test the exact connection used for model requests.</div>
+        </div>
+
+        <label for="sourceText">Project Scope &amp; New Request</label>
+        <textarea id="sourceText" maxlength="5000" placeholder="Project Scope: Build a student budgeting app that tracks expenses and monthly spending. New Request: Add recurring bill reminders to the dashboard."></textarea>
+
+        <div class="input-footer">
+          <span id="counter" class="meta">0 characters</span>
+          <button id="processButton" class="primary" type="button" disabled>Check Scope</button>
+        </div>
+
+        <div id="inputError" class="notice error hidden" role="alert"></div>
+      </section>
+
+      <section id="resultCard" class="card hidden" aria-labelledby="resultHeading">
+        <div class="status-row">
+          <h2 id="resultHeading"><span class="step">2</span>Review ScopeGuard assessment</h2>
+          <span class="status-row meta">
+            <span id="statusDot" class="status-dot"></span>
+            <span id="statusText">Waiting</span>
+          </span>
+        </div>
+
+        <div id="workingMessage" class="notice warning hidden" aria-live="polite">
+          The temporary model server is processing the request. The first request may be slower.
+        </div>
+
+        <div id="serverError" class="notice error hidden" role="alert"></div>
+        <div id="warningBox" class="notice warning hidden">
+          <strong>Review warnings</strong>
+          <ul id="warningList"></ul>
+        </div>
+
+        <div id="reviewArea" class="hidden">
+          <div class="review-banner">
+            AI-generated scope assessment. Edit and verify the verdict before approval.
+          </div>
+
+          <label for="modelOutput">Editable scope assessment</label>
+          <textarea id="modelOutput" class="output-editor"></textarea>
+
+          <p id="modelMeta" class="meta"></p>
+
+          <div class="button-row">
+            <button id="approveButton" class="approve" type="button">Approve decision</button>
+            <button id="rejectButton" class="reject" type="button">Reject</button>
+            <button id="tryAgainButton" class="secondary" type="button">Try again</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="card" aria-labelledby="approvedHeading">
+        <div class="status-row">
+          <h2 id="approvedHeading"><span class="step">3</span>Reviewed Scope Decisions</h2>
+          <button id="clearButton" class="secondary" type="button">Clear list</button>
+        </div>
+        <p class="hint">
+          Approved scope decisions are added only after human review.
+        </p>
+        <div id="emptyState" class="meta">No scope decisions have been approved yet.</div>
+        <div id="approvedList" class="task-list"></div>
+      </section>
+    </main>
+
+    <script>
+      const state = {
+        config: { minWords: 10, maxCharacters: 5000 },
+        processing: false,
+        backendReady: false
+      };
+
+      const elements = {};
+
+      window.addEventListener('load', () => {
+        [
+          'appTitle', 'sourceText', 'counter', 'processButton', 'inputError',
+          'backendPanel', 'backendDot', 'backendStatus', 'backendDetail', 'testConnectionButton',
+          'resultCard', 'statusDot', 'statusText', 'workingMessage', 'serverError',
+          'warningBox', 'warningList', 'reviewArea', 'modelOutput', 'modelMeta',
+          'approveButton', 'rejectButton', 'tryAgainButton', 'clearButton',
+          'emptyState', 'approvedList'
+        ].forEach(id => elements[id] = document.getElementById(id));
+
+        elements.sourceText.addEventListener('input', updateCounter);
+        elements.processButton.addEventListener('click', submitText);
+        elements.testConnectionButton.addEventListener('click', testBackend);
+        elements.approveButton.addEventListener('click', approveOutput);
+        elements.rejectButton.addEventListener('click', rejectOutput);
+        elements.tryAgainButton.addEventListener('click', submitText);
+        elements.clearButton.addEventListener('click', clearApproved);
+
+        loadApproved();
+        updateCounter();
+
+        google.script.run
+          .withSuccessHandler(config => {
+            state.config = config;
+            elements.appTitle.textContent = config.appTitle;
+            elements.sourceText.maxLength = config.maxCharacters;
+            updateCounter();
+            testBackend();
+          })
+          .withFailureHandler(() => {
+            showInputError('The application configuration could not be loaded.');
+          })
+          .getPublicConfig();
+      });
+
+      function updateCounter() {
+        const length = elements.sourceText.value.length;
+        elements.counter.textContent = `${length.toLocaleString()} / ${state.config.maxCharacters.toLocaleString()} characters`;
+      }
+
+      function testBackend() {
+        state.backendReady = false;
+        elements.processButton.disabled = true;
+        elements.testConnectionButton.disabled = true;
+        elements.backendPanel.className = 'notice warning';
+        elements.backendPanel.style.borderLeft = '';
+        elements.backendPanel.style.background = '';
+        elements.backendDot.className = 'status-dot working';
+        elements.backendStatus.textContent = 'Checking the Colab backend…';
+        elements.backendDetail.textContent = 'Keep the Colab runtime connected while this test runs.';
+
+        google.script.run
+          .withSuccessHandler(handleConnectionResult)
+          .withFailureHandler(() => handleConnectionResult({
+            ok: false,
+            error: 'Apps Script could not complete the connection test.'
+          }))
+          .testModelConnection();
+      }
+
+      function handleConnectionResult(result) {
+        elements.testConnectionButton.disabled = false;
+
+        if (result && result.ok) {
+          state.backendReady = true;
+          elements.processButton.disabled = false;
+          elements.backendPanel.className = 'notice';
+          elements.backendPanel.style.borderLeft = '4px solid var(--success)';
+          elements.backendPanel.style.background = '#edf9f3';
+          elements.backendDot.className = 'status-dot ready';
+          elements.backendStatus.textContent = 'Backend connected';
+          elements.backendDetail.textContent = result.message;
+          return;
+        }
+
+        state.backendReady = false;
+        elements.processButton.disabled = true;
+        elements.backendPanel.className = 'notice error';
+        elements.backendPanel.style.borderLeft = '';
+        elements.backendPanel.style.background = '';
+        elements.backendDot.className = 'status-dot failed';
+        elements.backendStatus.textContent = 'Backend unavailable';
+        elements.backendDetail.textContent = result && result.error
+          ? result.error
+          : 'Confirm that Colab reports BACKEND READY and test again.';
+      }
+
+      function validateInBrowser(text) {
+        const cleaned = String(text || '').replace(/\s+/g, ' ').trim();
+        if (!cleaned) return 'Enter text before running the tool.';
+        if (cleaned.split(/\s+/).length < state.config.minWords) {
+          return `Provide at least ${state.config.minWords} words.`;
+        }
+        if (cleaned.length > state.config.maxCharacters) {
+          return `Input cannot exceed ${state.config.maxCharacters.toLocaleString()} characters.`;
+        }
+        return null;
+      }
+
+      function submitText() {
+        if (state.processing) return;
+
+        if (!state.backendReady) {
+          showInputError('Test the Colab connection before checking scope.');
+          return;
+        }
+
+        const text = elements.sourceText.value;
+        const validationError = validateInBrowser(text);
+        hide(elements.inputError);
+
+        if (validationError) {
+          showInputError(validationError);
+          return;
+        }
+
+        state.processing = true;
+        elements.processButton.disabled = true;
+        elements.resultCard.classList.remove('hidden');
+        elements.reviewArea.classList.add('hidden');
+        hide(elements.serverError);
+        hide(elements.warningBox);
+        show(elements.workingMessage);
+        setStatus('working', 'Processing');
+        elements.resultCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+        google.script.run
+          .withSuccessHandler(handleModelResponse)
+          .withFailureHandler(() => {
+            handleModelResponse({
+              ok: false,
+              error: 'The application server failed unexpectedly. No action was taken.'
+            });
+          })
+          .processProductivityText({ text });
+      }
+
+      function handleModelResponse(result) {
+        state.processing = false;
+        elements.processButton.disabled = !state.backendReady;
+        hide(elements.workingMessage);
+
+        if (!result || !result.ok) {
+          state.backendReady = false;
+          elements.processButton.disabled = true;
+          setStatus('failed', 'Unavailable');
+          elements.serverError.textContent = result && result.error
+            ? result.error
+            : 'The model service did not return a usable response. No action was taken.';
+          show(elements.serverError);
+          return;
+        }
+
+        setStatus('ready', 'Ready for review');
+        elements.modelOutput.value = result.output;
+        elements.modelMeta.textContent = [
+          result.model,
+          result.device,
+          result.inferenceMs ? `${(result.inferenceMs / 1000).toFixed(2)} s model time` : null,
+          result.totalMs ? `${(result.totalMs / 1000).toFixed(2)} s total` : null
+        ].filter(Boolean).join(' • ');
+
+        const warnings = Array.isArray(result.warnings) ? result.warnings : [];
+        if (warnings.length) {
+          elements.warningList.innerHTML = '';
+          warnings.forEach(message => {
+            const item = document.createElement('li');
+            item.textContent = message;
+            elements.warningList.appendChild(item);
+          });
+          show(elements.warningBox);
+        }
+
+        show(elements.reviewArea);
+      }
+
+      function approveOutput() {
+        const approved = elements.modelOutput.value.trim();
+        if (!approved) {
+          elements.serverError.textContent = 'The scope assessment is empty and cannot be approved.';
+          show(elements.serverError);
+          return;
+        }
+
+        const records = getApproved();
+        records.unshift({ text: approved, approvedAt: new Date().toISOString() });
+        localStorage.setItem('build2ApprovedResults', JSON.stringify(records.slice(0, 20)));
+        renderApproved(records.slice(0, 20));
+        elements.reviewArea.classList.add('hidden');
+        setStatus('ready', 'Approved');
+      }
+
+      function rejectOutput() {
+        elements.modelOutput.value = '';
+        elements.reviewArea.classList.add('hidden');
+        hide(elements.warningBox);
+        setStatus('failed', 'Rejected — no action taken');
+      }
+
+      function getApproved() {
+        try {
+          return JSON.parse(localStorage.getItem('build2ApprovedResults') || '[]');
+        } catch (error) {
+          return [];
+        }
+      }
+
+      function loadApproved() {
+        renderApproved(getApproved());
+      }
+
+      function renderApproved(records) {
+        elements.approvedList.innerHTML = '';
+        elements.emptyState.classList.toggle('hidden', records.length > 0);
+
+        records.forEach(record => {
+          const item = document.createElement('article');
+          item.className = 'task-item';
+
+          const text = document.createElement('div');
+          text.textContent = record.text;
+
+          const time = document.createElement('time');
+          const date = new Date(record.approvedAt);
+          time.dateTime = record.approvedAt;
+          time.textContent = `Approved ${date.toLocaleString()}`;
+
+          item.append(text, time);
+          elements.approvedList.appendChild(item);
+        });
+      }
+
+      function clearApproved() {
+        if (!confirm('Clear all approved results from this browser?')) return;
+        localStorage.removeItem('build2ApprovedResults');
+        renderApproved([]);
+      }
+
+      function setStatus(kind, text) {
+        elements.statusDot.className = `status-dot ${kind}`;
+        elements.statusText.textContent = text;
+      }
+
+      function showInputError(message) {
+        elements.inputError.textContent = message;
+        show(elements.inputError);
+      }
+
+      function show(element) { element.classList.remove('hidden'); }
+      function hide(element) { element.classList.add('hidden'); }
+    </script>
+  </body>
+</html>
