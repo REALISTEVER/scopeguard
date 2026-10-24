@@ -1,0 +1,9 @@
+{
+  "original_csv_hash_verified": true,
+  "baseline_regression_tests": 2,
+  "repeat_metrics_exactly_match": true,
+  "repeat_predictions_exactly_match": true,
+  "evaluated_models": 4,
+  "fresh_independent_test": false,
+  "human_label_review_completed": false
+}

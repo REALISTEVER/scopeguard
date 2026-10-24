@@ -1,0 +1,2 @@
+CPU execution; torch threads=2 for embedding inference. Python 3.12.14
+model name	: INTEL(R) XEON(R) PLATINUM 8573C
